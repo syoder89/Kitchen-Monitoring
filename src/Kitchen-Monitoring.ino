@@ -22,16 +22,19 @@ typedef struct METRICS
 
 const float FREQ = 915.0;
 const float SAFE_COLD_TEMP = 4.44;
-RH_RF95 rf95;
+RH_RF95 rf95(D6,D2);
 RHDatagram manager(rf95, MY_ADDRESS);
 METRICS data; 
 
 // setup() runs once, when the device is first turned on.
 void setup() {
   pinMode(D7, OUTPUT);
-  digitalWrite(D7, HIGH); // Set the LED On while we are in init.
+  digitalWrite(D7, LOW); // Set the LED On while we are in init.
   // Put initialization like pinMode and begin functions here.
-  Serial.begin(9600);
+  Serial.begin(115200);
+  waitFor(Serial.isConnected, 15000);
+  delay(30000);
+  Serial.println("Init manager...");
   if (manager.init()) {
     if (!rf95.setFrequency(FREQ))
       Serial.println("Unable to set RF95 Frequency");
@@ -49,6 +52,8 @@ void setup() {
 }
 
 void loop() {
+  bool ret;
+  Serial.println("In loop...");
   // Going to fake temp & Humdity for now
   data.hum = random(2,100);
   data.temp = random(-20,45);
@@ -61,14 +66,12 @@ void loop() {
   }
   
   // Send Data over the Radio
-  if (!manager.sendto((uint8_t *) &data, sizeof(data), SERVER_ADDRESS)) {
-    Serial.println("Sending Packet Data");
-    for (int x=1; x=10; x++) {
-      digitalWrite(D7, HIGH);
-      delay(50);
-      digitalWrite(D7,LOW);
-    }
+  Serial.println("Sending Packet Data");
+  if ((ret = manager.sendto((uint8_t *) &data, sizeof(data), SERVER_ADDRESS))) {
+    Serial.println("Sendto succeeded");
   }
-  rf95.waitPacketSent(250);   
+  else
+    Serial.println("Sendto failed");
+//  rf95.waitPacketSent(250);   
   delay(30000);
 }
